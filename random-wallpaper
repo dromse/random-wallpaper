@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# ================================================ #
+# === This scripts set random wallpaper        === #
+# === Author: dromse(dromseproducer@gmail.com) === #
+# ================================================ #
+
+# DEP:
+# feh
+# curl
+# grep
+# echo
+# bash
+
+# Default size
+SIZE='1920x1080'
+
+while getopts ":q:s:h" opt; do
+    case ${opt} in 
+        h ) echo -e "Usage: random-wallpaper [options] [arguments]\n-q - Search wallpaper (default: '')\n-s - Size of wallpaper (default: 1920x1080)\n-h - Help"
+            exit
+            ;;
+        q ) 
+            QUERY=$OPTARG
+            ;;
+        s )
+            SIZE=$OPTARG
+            ;;
+        \? ) echo "Usage: cmd [-h] [-q] [-s]"
+            exit
+            ;;
+        esac
+done
+
+# set where it gets html
+LINK_TO_WEBSITE="https://wallhaven.cc/search?q=$QUERY&categories=110&purity=100&atleast=$SIZE&sorting=random"
+
+# get html 
+RANDOM_WALLPAPERS_HTML=$(curl -s $LINK_TO_WEBSITE)
+
+# get a link of first image page
+LINK_TO_FWALLPAPER=$(echo $RANDOM_WALLPAPERS_HTML | grep -oP '"https://wallhaven.cc/w/(.*?)"' | head -1 | tr '"' ' ')
+
+# get html of first image page
+FWALLPAPER=$(curl -s $LINK_TO_FWALLPAPER)
+
+# get link on image
+WALLPAPER=$(echo $FWALLPAPER | grep -oP 'src="https://w.wallhaven.cc/full/(.*?)"' | grep -oP '"(.*?)"' | tr '"' ' ')
+
+# set wallpaper
+feh --bg-fill $WALLPAPER
+
