@@ -11,42 +11,80 @@
 # grep
 # echo
 # bash
+# pywal
 
-# Default size
-SIZE='1920x1080'
+function parse_wall_link {
+    # replace spaces on special chars for query ' ' -> %20)
+    QUERY=$(echo "$QUERY_RAW" | sed -e 's/ /%20/g')
 
-while getopts ":q:s:h" opt; do
-    case ${opt} in 
-        h ) echo -e "Usage: random-wallpaper [options] [arguments]\n-q - Search wallpaper (default: '')\n-s - Size of wallpaper (default: 1920x1080)\n-h - Help"
+    # set where it gets html
+    LINK_TO_WEBSITE="https://wallhaven.cc/search?q=$QUERY&categories=110$RATIO&purity=100&sorting=random&order=desc"
+
+    # get html
+    RANDOM_WALLPAPERS_HTML=$(curl -s $LINK_TO_WEBSITE)
+
+    # get a link of first image page
+    LINK_TO_FWALLPAPER=$(echo $RANDOM_WALLPAPERS_HTML | grep -oP '"https://wallhaven.cc/w/(.*?)"' | head -1 | tr '"' ' ')
+
+    # get html of first image page
+    FWALLPAPER=$(curl -s $LINK_TO_FWALLPAPER)
+
+    # get link on image
+    WALLPAPER_LINK=$(echo $FWALLPAPER | grep -oP 'src="https://w.wallhaven.cc/full/(.*?)"' | grep -oP '"(.*?)"' | tr '"' ' ')
+}
+
+# help information using heredoc
+HELP=$(cat <<-END
+Usage: random-wallpaper [options] [arguments]\n\n
+-q QUERY\t Search wallpaper:\n
+\t\t e.g sky or 'purple sky'\n\n
+-r RATIO\t set ratio:\n
+\t\t 16x9, 16x10, 21x9\n\n
+-s SIZE\t Size of wallpaper:\n
+\t\t 1920x1080\n\n
+-p SATURATE\t use pywal and set saturate:\n
+\t\t 0.0 - 1.0\n\n
+-v\t\t Verbose\n
+-h\t\t Help
+END
+)
+
+while getopts ":q:s:p:r:vh" opt; do
+    case ${opt} in
+        h ) echo -e $HELP
             exit
             ;;
-        q ) 
-            QUERY=$OPTARG
+        q )
+            QUERY_RAW=$OPTARG
             ;;
         s )
             SIZE=$OPTARG
             ;;
+        r )
+            RATIO="&ratios=$OPTARG"
+            ;;
+        p )
+            parse_wall_link
+
+            SATURATE=$OPTARG
+
+            # save to tmp
+            `wget $WALLPAPER_LINK -P /tmp`
+
+            WALLPAPER_PATH="/tmp/`echo $WALLPAPER_LINK | grep -Po 'wallhaven-(.+)'`"
+            echo $WALLPAPER_PATH
+
+            # set wallpaper
+            # feh --bg-fill $WALLPAPER
+            wal -i $WALLPAPER_PATH --saturate $SATURATE
+            exit
+            ;;
         \? ) echo "Usage: cmd [-h] [-q] [-s]"
             exit
             ;;
-        esac
+    esac
 done
 
-# set where it gets html
-LINK_TO_WEBSITE="https://wallhaven.cc/search?q=$QUERY&categories=110&purity=100&atleast=$SIZE&sorting=random"
-
-# get html 
-RANDOM_WALLPAPERS_HTML=$(curl -s $LINK_TO_WEBSITE)
-
-# get a link of first image page
-LINK_TO_FWALLPAPER=$(echo $RANDOM_WALLPAPERS_HTML | grep -oP '"https://wallhaven.cc/w/(.*?)"' | head -1 | tr '"' ' ')
-
-# get html of first image page
-FWALLPAPER=$(curl -s $LINK_TO_FWALLPAPER)
-
-# get link on image
-WALLPAPER=$(echo $FWALLPAPER | grep -oP 'src="https://w.wallhaven.cc/full/(.*?)"' | grep -oP '"(.*?)"' | tr '"' ' ')
-
-# set wallpaper
-feh --bg-fill $WALLPAPER
-
+# if you don't use pywal you reach here
+parse_wall_link
+feh --bg-fill $WALLPAPER_LINK
