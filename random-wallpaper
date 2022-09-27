@@ -13,6 +13,10 @@
 # bash
 # pywal
 
+function wipe_wall_tmp {
+    rm -f /tmp/wallhaven-*
+}
+
 function parse_wall_link {
     # replace spaces on special chars for query ' ' -> %20)
     QUERY=$(echo "$QUERY_RAW" | sed -e 's/ /%20/g')
@@ -67,6 +71,8 @@ while getopts ":q:s:p:r:vh" opt; do
             parse_wall_link
 
             SATURATE=$OPTARG
+
+            wipe_wall_tmp
 
             # save to tmp
             `wget $WALLPAPER_LINK -P /tmp`
